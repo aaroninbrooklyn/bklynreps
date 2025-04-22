@@ -7,10 +7,10 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet" />
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.min.js"></script>
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.css" type="text/css" />
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.css" />
     <style>
         body { margin: 0; padding: 0; }
-        #map { position: absolute; top: 0; bottom: 0; left: 320px; right: 0; } /* Adjust left margin for instructions */
+        #map { position: absolute; top: 0; bottom: 0; left: 320px; right: 0; }
         #instructions-panel {
             position: absolute;
             top: 0;
@@ -25,16 +25,16 @@
             box-sizing: border-box;
         }
         #instruction-image {
-            width: 100%; /* Make it take up the full width */
-            height: auto; /* Maintain aspect ratio */
+            width: 100%;
+            height: auto;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         #search-container {
             position: absolute;
             top: 10px;
             right: 10px;
-            z-index: 1000; /* Ensure it's above the map */
+            z-index: 1000;
         }
         .mapboxgl-popup-content {
             font-family: Arial, sans-serif;
@@ -46,19 +46,19 @@
             border-radius: 4px;
         }
         .mapboxgl-ctrl-geocoder {
-            width: auto !important; /* Adjust width of the geocoder input */
+            width: auto !important;
             border-radius: 4px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            visibility: visible !important; /* Ensure the geocoder container is visible */
+            visibility: visible !important;
         }
         .mapboxgl-ctrl-geocoder input[type="text"] {
             padding: 10px;
             font-size: 14px;
-            border: 1px solid transparent; /* Remove default border */
+            border: 1px solid transparent;
         }
         #search-results {
             position: absolute;
-            top: 60px; /* Adjust position relative to search bar */
+            top: 60px;
             right: 10px;
             background-color: white;
             border: 1px solid #ddd;
@@ -67,16 +67,18 @@
             font-size: 14px;
             z-index: 1001;
             display: none;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
         }
     </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="instructions-panel">
-    <img id="instruction-image" src="https://i.imgur.com/QcSgbrV.jpeg" alt="Map Instructions">
+    <img id="instruction-image" src="https://i.imgur.com/tkZqS4J.png" alt="Map Instructions">
 </div>
 <div id="search-container"></div>
+<div id="search-results"></div>
 
 <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoiYWFyb25pbmJyb29rbHluIiwiYSI6ImNtOGowMmZ0dzBjMDgycnB4eWdhZW9nZ2sifQ.Z70awiKsIraT8Mfh-T_iAg';
@@ -96,17 +98,14 @@
     map.on('load', () => {
         map.on('mousemove', 'bklynlibrary-branches-0qfsv6', (e) => {
             if (e.features.length > 0) {
-                const feature = e.features[0];
-                const props = feature.properties;
-
+                const feature = e.features[0].properties;
                 const popupHtml = `
-                    <strong>Branch:</strong> ${props["branch"] || "N/A"}<br/>
-                    <strong>Council District:</strong> ${props["CouncilDistrict"] || "N/A"}<br/>
-                    <strong>Council Member:</strong> ${props["Council Member Name"] || "N/A"}<br/>
-                    <strong>District Office Address:</strong> ${props["District Office Address"] || "N/A"}<br/>
-                    <strong>District Office Phone:</strong> ${props["District Office Phone"] || "N/A"}<br/>
+                    <strong>Branch:</strong> ${feature["branch"] || "N/A"}<br/>
+                    <strong>Council District:</strong> ${feature["CouncilDistrict"] || "N/A"}<br/>
+                    <strong>Council Member:</strong> ${feature["Council Member Name"] || "N/A"}<br/>
+                    <strong>District Office Address:</strong> ${feature["District Office Address"] || "N/A"}<br/>
+                    <strong>District Office Phone:</strong> ${feature["District Office Phone"] || "N/A"}<br/>
                 `;
-
                 popup.setLngLat(e.lngLat).setHTML(popupHtml).addTo(map);
             }
         });
@@ -118,73 +117,62 @@
         const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
-            placeholder: 'Search address',
-            marker: false, // Do not add a default marker
+            placeholder: 'Search Brooklyn address',
+            marker: false
         });
 
         document.getElementById('search-container').appendChild(geocoder.onAdd(map));
 
-        // Force the geocoder control to be visible
-        const geocoderContainer = document.querySelector('.mapboxgl-ctrl-geocoder');
-        if (geocoderContainer) {
-            geocoderContainer.style.visibility = 'visible';
-        }
-
         geocoder.on('result', ({ result }) => {
             map.flyTo({
                 center: result.center,
-                zoom: 15 // Adjust zoom level as needed
+                zoom: 15
             });
-            findCouncilRepresentative(result.center[1], result.center[0]); // Pass coordinates to find council info
+            findCouncilRepresentative(result.center[1], result.center[0]);
         });
 
-        // Get user's location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     map.flyTo({
                         center: [position.coords.longitude, position.coords.latitude],
-                        zoom: 13 // Adjust initial zoom level for user's location
+                        zoom: 13
                     });
                 },
                 (error) => {
-                    console.error('Error getting user location:', error);
-                    // Optionally handle the error, e.g., display a message
+                    console.error('Geolocation error:', error);
                 }
             );
-        } else {
-            console.log('Geolocation is not supported by this browser.');
         }
     });
 
-    function findCouncilRepresentative(latitude, longitude) {
-        const queryUrl = `https://api.mapbox.com/v4/aaroninbrooklyn.bklynlibrary-branches-0qfsv6/tilequery/${longitude},${latitude}.json?radius=100&limit=1`;
+    function findCouncilRepresentative(lat, lon) {
+        const queryUrl = `https://api.mapbox.com/v4/aaroninbrooklyn.nyc-council-districts-bwhh6h/tilequery/${lon},${lat}.json?radius=10&limit=1&access_token=${mapboxgl.accessToken}`;
 
         fetch(queryUrl)
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
-                const searchResultsDiv = document.getElementById('search-results');
+                const results = document.getElementById('search-results');
                 if (data.features && data.features.length > 0) {
-                    const props = data.features[0].properties;
-                    const resultsHtml = `
+                    const p = data.features[0].properties;
+                    results.innerHTML = `
                         <h3>Council Information:</h3>
-                        <p><strong>Council District:</strong> ${props["CouncilDistrict"] || "N/A"}</p>
-                        <p><strong>Council Member:</strong> ${props["Council Member Name"] || "N/A"}</p>
-                        <p><strong>District Office Address:</strong> ${props["District Office Address"] || "N/A"}</p>
-                        <p><strong>District Office Phone:</strong> ${props["District Office Phone"] || "N/A"}</p>
+                        <p><strong>Council District:</strong> ${p["coun_dist"] || "N/A"}</p>
+                        <p><strong>Council Member:</strong> ${p["member_name"] || "N/A"}</p>
+                        <p><strong>District Office Address:</strong> ${p["district_address"] || "N/A"}</p>
+                        <p><strong>District Office Phone:</strong> ${p["district_phone"] || "N/A"}</p>
                     `;
-                    searchResultsDiv.innerHTML = resultsHtml;
-                    searchResultsDiv.style.display = 'block';
+                    results.style.display = 'block';
                 } else {
-                    searchResultsDiv.innerHTML = '<p>Could not find council information for this location.</p>';
-                    searchResultsDiv.style.display = 'block';
+                    results.innerHTML = '<p>No council district found at this location.</p>';
+                    results.style.display = 'block';
                 }
             })
-            .catch(error => {
-                console.error('Error querying council data:', error);
-                const searchResultsDiv = document.getElementById('search-results');
-                searchResultsDiv.innerHTML = '<p>Error finding council information.</p>';
-                searchResultsDiv.style.display = 'block';
+            .catch(err => {
+                console.error(err);
+                const results = document.getElementById('search-results');
+                results.innerHTML = '<p>Error retrieving council info.</p>';
+                results.style.display = 'block';
             });
     }
 </script>
