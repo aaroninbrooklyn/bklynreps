@@ -6,8 +6,8 @@
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet" />
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.min.js"></script>
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1/mapbox-gl-geocoder.css" />
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; left: 320px; right: 0; }
@@ -36,25 +36,11 @@
             right: 10px;
             z-index: 1000;
         }
-        .mapboxgl-popup-content {
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-        }
-        .popup-img {
-            width: 100px;
-            margin-top: 5px;
-            border-radius: 4px;
-        }
         .mapboxgl-ctrl-geocoder {
             width: auto !important;
             border-radius: 4px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             visibility: visible !important;
-        }
-        .mapboxgl-ctrl-geocoder input[type="text"] {
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid transparent;
         }
         #search-results {
             position: absolute;
@@ -67,15 +53,15 @@
             font-size: 14px;
             z-index: 1001;
             display: none;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             max-width: 300px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="instructions-panel">
-    <img id="instruction-image" src="https://i.imgur.com/tkZqS4J.png" alt="Map Instructions">
+    <img id="instruction-image" src="https://i.imgur.com/QcSgbrV.jpg" alt="Map Instructions">
 </div>
 <div id="search-container"></div>
 <div id="search-results"></div>
@@ -96,17 +82,18 @@
     });
 
     map.on('load', () => {
+        // Hover popup for BPL branches
         map.on('mousemove', 'bklynlibrary-branches-0qfsv6', (e) => {
             if (e.features.length > 0) {
-                const feature = e.features[0].properties;
-                const popupHtml = `
-                    <strong>Branch:</strong> ${feature["branch"] || "N/A"}<br/>
-                    <strong>Council District:</strong> ${feature["CouncilDistrict"] || "N/A"}<br/>
-                    <strong>Council Member:</strong> ${feature["Council Member Name"] || "N/A"}<br/>
-                    <strong>District Office Address:</strong> ${feature["District Office Address"] || "N/A"}<br/>
-                    <strong>District Office Phone:</strong> ${feature["District Office Phone"] || "N/A"}<br/>
+                const props = e.features[0].properties;
+                const html = `
+                    <strong>Branch:</strong> ${props["branch"] || "N/A"}<br/>
+                    <strong>Council District:</strong> ${props["CouncilDistrict"] || "N/A"}<br/>
+                    <strong>Council Member:</strong> ${props["Council Member Name"] || "N/A"}<br/>
+                    <strong>District Office Address:</strong> ${props["District Office Address"] || "N/A"}<br/>
+                    <strong>District Office Phone:</strong> ${props["District Office Phone"] || "N/A"}<br/>
                 `;
-                popup.setLngLat(e.lngLat).setHTML(popupHtml).addTo(map);
+                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
             }
         });
 
@@ -114,6 +101,7 @@
             popup.remove();
         });
 
+        // Geocoder setup
         const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
@@ -124,55 +112,45 @@
         document.getElementById('search-container').appendChild(geocoder.onAdd(map));
 
         geocoder.on('result', ({ result }) => {
-            map.flyTo({
-                center: result.center,
-                zoom: 15
-            });
-            findCouncilRepresentative(result.center[1], result.center[0]);
+            const [lon, lat] = result.center;
+            map.flyTo({ center: [lon, lat], zoom: 15 });
+            findCouncilDistrict(lat, lon);
         });
 
+        // Try locating user
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    map.flyTo({
-                        center: [position.coords.longitude, position.coords.latitude],
-                        zoom: 13
-                    });
-                },
-                (error) => {
-                    console.error('Geolocation error:', error);
-                }
-            );
+            navigator.geolocation.getCurrentPosition(pos => {
+                const { latitude, longitude } = pos.coords;
+                map.flyTo({ center: [longitude, latitude], zoom: 13 });
+            });
         }
     });
 
-    function findCouncilRepresentative(lat, lon) {
-        const queryUrl = `https://api.mapbox.com/v4/aaroninbrooklyn.nyc-council-districts-bwhh6h/tilequery/${lon},${lat}.json?radius=10&limit=1&access_token=${mapboxgl.accessToken}`;
+    function findCouncilDistrict(lat, lon) {
+        const url = `https://api.mapbox.com/v4/aaroninbrooklyn.nyc-council-districts-bwhh6h/tilequery/${lon},${lat}.json?radius=10&limit=1&access_token=${mapboxgl.accessToken}`;
 
-        fetch(queryUrl)
+        fetch(url)
             .then(res => res.json())
             .then(data => {
-                const results = document.getElementById('search-results');
+                const panel = document.getElementById('search-results');
                 if (data.features && data.features.length > 0) {
-                    const p = data.features[0].properties;
-                    results.innerHTML = `
-                        <h3>Council Information:</h3>
-                        <p><strong>Council District:</strong> ${p["coun_dist"] || "N/A"}</p>
-                        <p><strong>Council Member:</strong> ${p["member_name"] || "N/A"}</p>
-                        <p><strong>District Office Address:</strong> ${p["district_address"] || "N/A"}</p>
-                        <p><strong>District Office Phone:</strong> ${p["district_phone"] || "N/A"}</p>
+                    const props = data.features[0].properties;
+                    panel.innerHTML = `
+                        <h3>Council Information</h3>
+                        <p><strong>Council District:</strong> ${props["coun_dist"] || "N/A"}</p>
+                        <p><strong>Council Member:</strong> ${props["member_name"] || "N/A"}</p>
+                        <p><strong>District Office Address:</strong> ${props["district_address"] || "N/A"}</p>
+                        <p><strong>District Office Phone:</strong> ${props["district_phone"] || "N/A"}</p>
                     `;
-                    results.style.display = 'block';
                 } else {
-                    results.innerHTML = '<p>No council district found at this location.</p>';
-                    results.style.display = 'block';
+                    panel.innerHTML = '<p>No council district found at this location.</p>';
                 }
+                panel.style.display = 'block';
             })
-            .catch(err => {
-                console.error(err);
-                const results = document.getElementById('search-results');
-                results.innerHTML = '<p>Error retrieving council info.</p>';
-                results.style.display = 'block';
+            .catch(() => {
+                const panel = document.getElementById('search-results');
+                panel.innerHTML = '<p>Error retrieving council district info.</p>';
+                panel.style.display = 'block';
             });
     }
 </script>
