@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>BPL Branch & Council Info</title>
+    <title>BPL Council District Lookup</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet" />
@@ -10,42 +10,17 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
     <style>
         body { margin: 0; padding: 0; }
-        #map { position: absolute; top: 0; bottom: 0; left: 320px; right: 0; }
-        #instructions-panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 300px;
-            bottom: 0;
-            background-color: #f8f8f8;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-        #instruction-image {
-            width: 100%;
-            height: auto;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
         #search-container {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             z-index: 1000;
-        }
-        .mapboxgl-ctrl-geocoder {
-            width: auto !important;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            visibility: visible !important;
         }
         #search-results {
             position: absolute;
-            top: 60px;
-            right: 10px;
+            top: 70px;
+            left: 10px;
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -56,13 +31,13 @@
             max-width: 300px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
+        .mapboxgl-ctrl-geocoder {
+            width: 300px !important;
+        }
     </style>
 </head>
 <body>
 <div id="map"></div>
-<div id="instructions-panel">
-    <img id="instruction-image" src="https://i.imgur.com/QcSgbrV.jpg" alt="Map Instructions">
-</div>
 <div id="search-container"></div>
 <div id="search-results"></div>
 
@@ -76,71 +51,35 @@
         zoom: 11.7
     });
 
-    const popup = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false
+    map.addControl(new mapboxgl.NavigationControl());
+
+    const geocoder = new MapboxGeocoder({
+        accessToken: mapboxgl.accessToken,
+        mapboxgl: mapboxgl,
+        placeholder: 'Search Brooklyn address',
+        marker: false
     });
 
-    map.on('load', () => {
-        // Hover popup for BPL branches
-        map.on('mousemove', 'bklynlibrary-branches-0qfsv6', (e) => {
-            if (e.features.length > 0) {
-                const props = e.features[0].properties;
-                const html = `
-                    <strong>Branch:</strong> ${props["branch"] || "N/A"}<br/>
-                    <strong>Council District:</strong> ${props["CouncilDistrict"] || "N/A"}<br/>
-                    <strong>Council Member:</strong> ${props["Council Member Name"] || "N/A"}<br/>
-                    <strong>District Office Address:</strong> ${props["District Office Address"] || "N/A"}<br/>
-                    <strong>District Office Phone:</strong> ${props["District Office Phone"] || "N/A"}<br/>
-                `;
-                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
-            }
-        });
+    document.getElementById('search-container').appendChild(geocoder.onAdd(map));
 
-        map.on('mouseleave', 'bklynlibrary-branches-0qfsv6', () => {
-            popup.remove();
-        });
-
-        // Geocoder setup
-        const geocoder = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken,
-            mapboxgl: mapboxgl,
-            placeholder: 'Search Brooklyn address',
-            marker: false
-        });
-
-        document.getElementById('search-container').appendChild(geocoder.onAdd(map));
-
-        geocoder.on('result', ({ result }) => {
-            const [lon, lat] = result.center;
-            map.flyTo({ center: [lon, lat], zoom: 15 });
-            findCouncilDistrict(lat, lon);
-        });
-
-        // Try locating user
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                const { latitude, longitude } = pos.coords;
-                map.flyTo({ center: [longitude, latitude], zoom: 13 });
-            });
-        }
+    geocoder.on('result', ({ result }) => {
+        const [lon, lat] = result.center;
+        map.flyTo({ center: [lon, lat], zoom: 14 });
+        findCouncilDistrict(lat, lon);
     });
 
     function findCouncilDistrict(lat, lon) {
-        const url = `https://api.mapbox.com/v4/aaroninbrooklyn.nyc-council-districts-bwhh6h/tilequery/${lon},${lat}.json?radius=10&limit=1&access_token=${mapboxgl.accessToken}`;
+        const url = `https://api.mapbox.com/v4/aaroninbrooklyn.a57zf1nx/tilequery/${lon},${lat}.json?radius=100&limit=1&access_token=${mapboxgl.accessToken}`;
 
         fetch(url)
             .then(res => res.json())
             .then(data => {
                 const panel = document.getElementById('search-results');
                 if (data.features && data.features.length > 0) {
-                    const props = data.features[0].properties;
+                    const district = data.features[0].properties.CounDist;
                     panel.innerHTML = `
-                        <h3>Council Information</h3>
-                        <p><strong>Council District:</strong> ${props["coun_dist"] || "N/A"}</p>
-                        <p><strong>Council Member:</strong> ${props["member_name"] || "N/A"}</p>
-                        <p><strong>District Office Address:</strong> ${props["district_address"] || "N/A"}</p>
-                        <p><strong>District Office Phone:</strong> ${props["district_phone"] || "N/A"}</p>
+                        <h3>You are in Council District ${district}</h3>
+                        <p><a href="https://council.nyc.gov/district-${district}/" target="_blank">View Council Member’s page →</a></p>
                     `;
                 } else {
                     panel.innerHTML = '<p>No council district found at this location.</p>';
