@@ -4,12 +4,16 @@
     <meta charset="utf-8" />
     <title>BPL Council District Lookup</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no, width=device-width" />
+    <link rel="icon" href="https://www.bklynlibrary.org/sites/default/files/favicon.ico" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" />
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body {
+            margin: 0; padding: 0;
+            font-family: Arial, sans-serif;
+        }
 
         #map {
             position: absolute;
@@ -22,12 +26,13 @@
             top: 0; left: 0;
             width: 300px;
             bottom: 0;
-            background-color: #f8f8f8;
+            background-color: #f5f5f5;
             padding: 20px;
             font-size: 14px;
             overflow-y: auto;
             box-sizing: border-box;
             transition: transform 0.3s ease-in-out;
+            border-right: 3px solid #0055B8;
         }
 
         #instruction-image {
@@ -43,7 +48,7 @@
             top: 10px;
             left: 10px;
             z-index: 1002;
-            background: #0055b8;
+            background: #0055B8;
             color: white;
             padding: 8px 12px;
             font-size: 14px;
@@ -81,7 +86,26 @@
             font-size: 13px;
         }
 
-        /* Mobile styles */
+        #search-results h3,
+        .mapboxgl-popup-content h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 0;
+            color: #0055B8;
+        }
+
+        #bpl-logo {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            z-index: 1001;
+        }
+
+        #bpl-logo img {
+            height: 40px;
+            opacity: 0.85;
+        }
+
         @media (max-width: 768px) {
             #map { left: 0; }
             #instructions-panel {
@@ -102,6 +126,10 @@
 <div id="instructions-panel">
     <img id="instruction-image" src="https://i.imgur.com/QcSgbrV.jpg" alt="Map Instructions">
 </div>
+
+<a href="https://www.bklynlibrary.org" target="_blank" id="bpl-logo">
+    <img src="https://www.bklynlibrary.org/sites/default/files/logo-white.svg" alt="BPL logo">
+</a>
 
 <div id="search-container"></div>
 <div id="search-results"></div>
